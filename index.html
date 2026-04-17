@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Отчёт о движении денежных средств · 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #eeede9;
+    --text: #1a1a18;
+    --text2: #6b6b66;
+    --text3: #9b9b96;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --green: #1D9E75;
+    --red: #D85A30;
+    --blue: #378ADD;
+    --purple: #534AB7;
+    --amber: #EF9F27;
+    --gray: #888780;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg2: #2a2a28;
+      --bg3: #333330;
+      --text: #f0efea;
+      --text2: #a0a09a;
+      --text3: #6b6b66;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.18);
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg3);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+
+  header { margin-bottom: 24px; }
+  header h1 { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  header p  { font-size: 13px; color: var(--text2); }
+
+  /* PERIOD BAR */
+  .period-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 10px 16px; margin-bottom: 20px;
+  }
+  .period-label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .seg {
+    display: flex; gap: 2px;
+    background: var(--bg); border: 0.5px solid var(--border2);
+    border-radius: var(--radius); padding: 3px;
+  }
+  .seg-btn {
+    font-size: 12px; padding: 5px 14px; border-radius: 6px; cursor: pointer;
+    border: none; background: transparent; color: var(--text2); white-space: nowrap;
+    font-family: inherit;
+  }
+  .seg-btn.active {
+    background: var(--bg2); color: var(--text); font-weight: 500;
+    border: 0.5px solid var(--border2);
+  }
+  .sub-select { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    font-size: 12px; padding: 4px 11px; border-radius: 20px; cursor: pointer;
+    border: 0.5px solid var(--border2); background: transparent; color: var(--text2);
+    font-family: inherit; white-space: nowrap; transition: background .15s, color .15s;
+  }
+  .pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* METRIC CARDS */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
+  @media(max-width: 700px) { .grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .metric-card { background: var(--bg2); border-radius: var(--radius); padding: 14px 16px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 500; color: var(--text); }
+  .metric-value.pos { color: var(--green); }
+  .metric-value.neg { color: var(--red); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* CARDS */
+  .chart-card {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px;
+  }
+  .chart-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 14px; }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin-bottom: 16px; }
+  @media(max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 12px; color: var(--text2); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 16px;
+    background: var(--bg2); border-radius: var(--radius); padding: 3px;
+  }
+  .tab {
+    flex: 1; text-align: center; font-size: 12px; padding: 6px 4px;
+    border-radius: 6px; cursor: pointer; color: var(--text2);
+    border: none; background: transparent; font-family: inherit;
+  }
+  .tab.active {
+    background: var(--bg); color: var(--text); font-weight: 500;
+    border: 0.5px solid var(--border2);
+  }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    text-align: left; font-weight: 500; color: var(--text2);
+    padding: 6px 8px; border-bottom: 0.5px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 5px 8px; color: var(--text); border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td.pos { color: var(--green); }
+  td.neg { color: var(--red); }
+  tr.total-row td { background: var(--bg2); font-weight: 500; }
+
+  /* REPORT SECTION */
+  .report-section { margin-top: 32px; }
+  .report-section h2 { font-size: 16px; font-weight: 500; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); }
+  .report-table table { font-size: 13px; }
+  .report-table th { font-size: 12px; }
+  .section-header td { background: var(--bg2); font-weight: 500; font-size: 13px; color: var(--text); }
+  .sub-row td:first-child { padding-left: 28px; color: var(--text2); }
+  .grand-total td { background: var(--bg3); font-weight: 500; font-size: 13px; border-top: 1px solid var(--border2); }
+
+  footer { text-align: center; font-size: 11px; color: var(--text3); margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Отчёт о движении денежных средств</h1>
+    <p id="period-caption">2024 год · все месяцы</p>
+  </header>
+
+  <!-- PERIOD SELECTOR -->
+  <div class="period-bar">
+    <span class="period-label">Период:</span>
+    <div class="seg">
+      <button class="seg-btn active" onclick="setPeriodType('year')">Год</button>
+      <button class="seg-btn" onclick="setPeriodType('month')">Месяц</button>
+      <button class="seg-btn" onclick="setPeriodType('week')">Неделя</button>
+    </div>
+    <div id="sub-select" class="sub-select" style="display:none;"></div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="grid-4">
+    <div class="metric-card"><div class="metric-label">Поступления</div><div class="metric-value pos" id="m-income">—</div><div class="metric-sub" id="m-income-sub">от покупателей + депозит</div></div>
+    <div class="metric-card"><div class="metric-label">Выбытия</div><div class="metric-value neg" id="m-expense">—</div><div class="metric-sub">операционные расходы</div></div>
+    <div class="metric-card"><div class="metric-label">Чистый поток</div><div class="metric-value" id="m-net">—</div><div class="metric-sub">операционная деятельность</div></div>
+    <div class="metric-card"><div class="metric-label">Дивиденды</div><div class="metric-value neg" id="m-div">—</div><div class="metric-sub">финансовая деятельность</div></div>
+  </div>
+
+  <!-- MAIN CHART -->
+  <div class="chart-card">
+    <div class="chart-title" id="main-chart-title">Поступления и выбытия, тыс. руб.</div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#1D9E75;"></span>Поступления</span>
+      <span><span class="legend-dot" style="background:#D85A30;"></span>Выбытия</span>
+      <span><span class="legend-dot" style="background:#378ADD;"></span>Чистый поток</span>
+    </div>
+    <div style="position:relative; width:100%; height:280px;">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+
+  <!-- TWO CHARTS -->
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Структура расходов</div>
+      <div style="position:relative; width:100%; height:200px;">
+        <canvas id="expChart"></canvas>
+      </div>
+      <div id="exp-legend" class="legend" style="margin-top:10px; margin-bottom:0;"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Чистый поток по периодам, тыс. руб.</div>
+      <div style="position:relative; width:100%; height:200px;">
+        <canvas id="netChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL TABLES -->
+  <div class="chart-card">
+    <div class="chart-title">Детализация</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('summary')">Сводная</button>
+      <button class="tab" onclick="switchTab('detail')">Расходы</button>
+      <button class="tab" onclick="switchTab('clients')">Контрагенты</button>
+    </div>
+    <div id="tab-summary" class="table-wrap"></div>
+    <div id="tab-detail"  class="table-wrap" style="display:none;"></div>
+    <div id="tab-clients" class="table-wrap" style="display:none;"></div>
+  </div>
+
+  <!-- FORMAL REPORT -->
+  <div class="report-section">
+    <h2>Отчёт о движении денежных средств · форма · 2024</h2>
+    <div class="report-table chart-card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:260px;">Наименование показателя</th>
+            <th style="text-align:right; min-width:90px;">Янв</th>
+            <th style="text-align:right; min-width:90px;">Фев</th>
+            <th style="text-align:right; min-width:90px;">Мар</th>
+            <th style="text-align:right; min-width:90px;">Апр</th>
+            <th style="text-align:right; min-width:90px;">Май</th>
+            <th style="text-align:right; min-width:90px;">Июн</th>
+            <th style="text-align:right; min-width:90px;">Июл</th>
+            <th style="text-align:right; min-width:90px;">Авг</th>
+            <th style="text-align:right; min-width:90px;">Сен</th>
+            <th style="text-align:right; min-width:90px;">Окт</th>
+            <th style="text-align:right; min-width:90px;">Ноя</th>
+            <th style="text-align:right; min-width:100px; font-weight:500;">Итого</th>
+          </tr>
+        </thead>
+        <tbody id="formal-report-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Сформировано автоматически на основе данных учётной системы · 2024</footer>
+</div>
+
+<script>
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь'];
+const MONTHS_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя'];
+
+const monthlyIncome  = [2096970,7002702,4101140,4909646,7136054,4396436,6701552,8930413,11637801,5811672,621502];
+const monthlyExpense = [1475800,2860125,3018180,2584217,2022503,1804267,1600801,5534505,4280136,3175654,574698];
+const monthlyFin     = [629065,155158,124500,92880,222434,263580,160713,18366,50800,102442,59000];
+
+const monthlyExpDetail = {
+  'Лабораторные испытания': [397000,1307900,739321,584438,212920,904320,150190,1304310,3221716,1525654,50000],
+  'Заработная плата':       [426293,1094057,913604,816449,1124387,344861,787178,742000,447446,930234,394839],
+  'Возврат денег':          [0,0,163500,319000,0,0,0,2929740,0,0,0],
+  'ЕНП':                    [123979,35419,188687,293169,18725,24981,232338,21488,31360,183892,45331],
+  'Реклама':                [138287,145750,86367,119500,103200,73424,128376,134851,187270,190000,39600],
+  'Аренда офиса':           [122706,104250,104250,104250,104250,208500,0,104250,104250,114700,0],
+  'Бухгалтерия':            [53295,52290,36560,61310,25325,24960,42965,36665,59580,61697,0],
+  'Малоценка':              [133714,20816,58701,0,0,4497,61385,11712,86583,3921,8782],
+  'Подбор персонала':       [44365,12830,37830,11415,0,12512,14118,26191,8005,7500,9302],
+  'Прочее':                 [36161,86813,689360,274686,433696,205232,183451,223298,133926,157056,27444],
+};
+
+const weeklyData = {
+  14: { income:1106372, expense:354598, fin:0,
+    clients:[['БГ Констракшен',20000],['Гиастрой ООО',18300],['ГорИнжСтрой',128750],['Модус',15000],['Ривьера АО',848268],['Солбер Инжиниринг',75000],['Доход по депозиту',1054]],
+    expDetail:{'Аренда офиса':88737,'Заработная плата':128685,'Интернет':6608,'Лаб. испытания':9460,'ЕНП':30870,'Покупка авто':69065,'Реклама':5000,'Услуги банка':11169,'Офисные расходы':2100,'Проезд':2740}},
+  15: { income:551276, expense:143515, fin:0,
+    clients:[['Без указания',115900],['Модус',19520],['Монтажсетьстрой',21000],['НПП Аналитические',33600],['Промстройкомплект',50000],['СпецИнжЗащита',16800],['Уралрегионстрой',50050],['Фортресс',172100],['ХоумЭнерго',68500],['Доход по депозиту',3806]],
+    expDetail:{'Заработная плата':93279,'ЕНП':3600,'Реклама':40000,'Подбор персонала':2338,'Услуги банка':298,'Членские взносы':4000}},
+  16: { income:257743, expense:506540, fin:0,
+    clients:[['ГорИнжСтрой',18270],['ИП Жуков',28000],['Миг Стройпроект',115900],['Модус',19520],['Частник Вадим',25000],['Доход по депозиту',51053]],
+    expDetail:{'Аренда офиса':125644,'Заработная плата':25000,'Интернет':1220,'Лаб. испытания':194000,'Малоценка':5250,'Покупка авто':67878,'Реклама':50000,'Телефон':20000,'Услуги банка':298,'Штрафы':2250,'Экономист':15000}},
+};
+
+let periodType = 'year', selectedMonth = null, selectedWeek = null;
+let mainChart = null, expChart = null, netChart = null;
+
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+const textColor = isDark ? '#a0a09a' : '#888';
+const EXP_COLORS = ['#D85A30','#534AB7','#378ADD','#EF9F27','#1D9E75','#888780','#5DCAA5','#F09595','#AFA9EC','#FAC775'];
+
+function fmt(v)     { if(v==null)return'—'; return(v<0?'−':'')+Math.abs(Math.round(v/1000)).toLocaleString('ru'); }
+function fmtFull(v) { if(v==null)return'—'; return(v<0?'−':'')+Math.abs(Math.round(v)).toLocaleString('ru'); }
+function fmtM(v)    { if(v==null)return'—'; const a=Math.abs(v); const s=v<0?'−':''; if(a>=1e6)return s+(a/1e6).toFixed(1)+' млн'; if(a>=1e3)return s+Math.round(a/1000).toLocaleString('ru')+' тыс.'; return s+Math.round(a).toLocaleString('ru'); }
+
+function getCurrentData() {
+  if (periodType==='year') {
+    const inc=monthlyIncome.reduce((a,b)=>a+b,0), exp=monthlyExpense.reduce((a,b)=>a+b,0), fin=monthlyFin.reduce((a,b)=>a+b,0);
+    const expDet={}; for(const[k,a] of Object.entries(monthlyExpDetail)) expDet[k]=a.reduce((s,x)=>s+x,0);
+    return {inc,exp,fin,labels:MONTHS_SHORT,incArr:monthlyIncome,expArr:monthlyExpense,netArr:monthlyIncome.map((v,i)=>v-monthlyExpense[i]),expDet,caption:'2024 год · все месяцы'};
+  }
+  if (periodType==='month') {
+    const mi=selectedMonth||0;
+    const weeks=[14,15,16];
+    const wInc=weeks.map(w=>weeklyData[w].income), wExp=weeks.map(w=>weeklyData[w].expense);
+    const expDet={}; for(const[k,a] of Object.entries(monthlyExpDetail)) expDet[k]=a[mi]||0;
+    return {inc:monthlyIncome[mi],exp:monthlyExpense[mi],fin:monthlyFin[mi],labels:weeks.map(w=>'Нед. '+w),incArr:wInc,expArr:wExp,netArr:wInc.map((v,i)=>v-wExp[i]),expDet,caption:MONTHS[mi]+' 2024'};
+  }
+  const w=selectedWeek||14, wd=weeklyData[w];
+  return {inc:wd.income,exp:wd.expense,fin:0,labels:wd.clients.map(c=>c[0].slice(0,14)),incArr:wd.clients.map(c=>c[1]),expArr:[wd.expense],netArr:[wd.income-wd.expense],expDet:wd.expDetail,caption:'Неделя '+w+' · 2024',clients:wd.clients};
+}
+
+function destroyChart(c){ if(c){try{c.destroy()}catch(e){}} }
+
+function renderAll() {
+  const d = getCurrentData();
+  document.getElementById('period-caption').textContent = d.caption;
+  document.getElementById('m-income').textContent = fmtM(d.inc);
+  document.getElementById('m-expense').textContent = '−'+fmtM(d.exp);
+  const net=d.inc-d.exp, nm=document.getElementById('m-net');
+  nm.textContent=(net>=0?'+':'')+fmtM(net); nm.className='metric-value '+(net>=0?'pos':'neg');
+  document.getElementById('m-div').textContent = d.fin?'−'+fmtM(d.fin):'—';
+  document.getElementById('main-chart-title').textContent = periodType==='week'?'Поступления по контрагентам, руб.':'Поступления и выбытия, тыс. руб.';
+
+  destroyChart(mainChart); destroyChart(expChart); destroyChart(netChart);
+  const scaleCb=v=>(v<0?'−':'')+Math.abs(v).toLocaleString('ru');
+
+  if (periodType==='week') {
+    mainChart=new Chart(document.getElementById('mainChart'),{type:'bar',
+      data:{labels:d.labels,datasets:[{label:'Поступления',data:d.incArr.map(v=>Math.round(v)),backgroundColor:'#1D9E75',borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:textColor,autoSkip:false,maxRotation:35},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:v=>Math.round(v).toLocaleString('ru')},grid:{color:gridColor}}}}});
+  } else {
+    mainChart=new Chart(document.getElementById('mainChart'),{type:'bar',
+      data:{labels:d.labels,datasets:[
+        {label:'Поступления',data:d.incArr.map(v=>Math.round(v/1000)),backgroundColor:'#1D9E75',borderRadius:3},
+        {label:'Выбытия',data:d.expArr.map(v=>-Math.round(v/1000)),backgroundColor:'#D85A30',borderRadius:3},
+        {label:'Чистый поток',data:d.incArr.map((v,i)=>Math.round((v-d.expArr[i])/1000)),type:'line',borderColor:'#378ADD',backgroundColor:'transparent',pointBackgroundColor:'#378ADD',pointRadius:4,tension:0.3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:textColor,autoSkip:false},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:scaleCb},grid:{color:gridColor}}}}});
+  }
+
+  const expEntries=Object.entries(d.expDet).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const topExp=expEntries.slice(0,6), otherSum=expEntries.slice(6).reduce((s,[,v])=>s+v,0);
+  if(otherSum>0) topExp.push(['Прочее',otherSum]);
+  expChart=new Chart(document.getElementById('expChart'),{type:'doughnut',
+    data:{labels:topExp.map(e=>e[0]),datasets:[{data:topExp.map(e=>Math.round(e[1])),backgroundColor:EXP_COLORS.slice(0,topExp.length),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+Math.round(ctx.raw).toLocaleString('ru')+' руб.'}}}}});
+  document.getElementById('exp-legend').innerHTML=topExp.map((e,i)=>`<span><span class="legend-dot" style="background:${EXP_COLORS[i]};"></span>${e[0]}</span>`).join('');
+
+  if(periodType!=='week'){
+    const nv=d.incArr.map((v,i)=>Math.round((v-d.expArr[i])/1000));
+    netChart=new Chart(document.getElementById('netChart'),{type:'bar',
+      data:{labels:d.labels,datasets:[{label:'Чистый поток',data:nv,backgroundColor:nv.map(v=>v>=0?'#1D9E75':'#D85A30'),borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:textColor,autoSkip:false},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:scaleCb},grid:{color:gridColor}}}}});
+  } else {
+    netChart=new Chart(document.getElementById('netChart'),{type:'bar',
+      data:{labels:['Нед. '+(selectedWeek||14)],datasets:[{label:'Поступления',data:[Math.round(d.inc/1000)],backgroundColor:'#1D9E75',borderRadius:3},{label:'Выбытия',data:[-Math.round(d.exp/1000)],backgroundColor:'#D85A30',borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:textColor},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:scaleCb},grid:{color:gridColor}}}}});
+  }
+
+  renderTables(d);
+}
+
+function renderTables(d) {
+  const ts=document.getElementById('tab-summary');
+  if(periodType==='year'){
+    const rows=[
+      {l:'Поступления',vals:monthlyIncome,tot:monthlyIncome.reduce((a,b)=>a+b,0),cls:'pos',total:true},
+      {l:'  · от покупателей',vals:[2096970,6976851,4085285,4896422,7097038,4378869,6678712,8767946,11592327,5798988,617780],tot:62987189,cls:'pos'},
+      {l:'  · доход по депозиту',vals:[0,25851,15855,13224,20170,16757,22841,38027,45473,12684,3722],tot:214603,cls:'pos'},
+      {l:'Выбытия',vals:monthlyExpense.map(v=>-v),tot:-monthlyExpense.reduce((a,b)=>a+b,0),cls:'neg',total:true},
+      {l:'  · заработная плата',vals:[-426293,-1094057,-913604,-816449,-1124387,-344861,-787178,-742000,-447446,-930234,-394839],tot:-8021347,cls:'neg'},
+      {l:'  · операционные расходы',vals:[-1049507,-1766068,-2104576,-1767768,-898116,-1459406,-813623,-4792504,-3832690,-2245420,-179859],tot:-20914623,cls:'neg'},
+      {l:'Чистый поток (операц.)',vals:monthlyIncome.map((v,i)=>v-monthlyExpense[i]),tot:monthlyIncome.reduce((a,b)=>a+b,0)-monthlyExpense.reduce((a,b)=>a+b,0),cls:'',total:true},
+      {l:'Дивиденды',vals:monthlyFin.map(v=>-v),tot:-monthlyFin.reduce((a,b)=>a+b,0),cls:'neg'},
+    ];
+    ts.innerHTML=`<table><thead><tr><th style="min-width:200px;">Статья</th>${MONTHS_SHORT.map(m=>`<th style="text-align:right;">${m}</th>`).join('')}<th style="text-align:right; font-weight:500;">Итого</th></tr></thead><tbody>`
+      +rows.map(r=>`<tr class="${r.total?'total-row':''}"><td class="${r.cls}">${r.l}</td>${r.vals.map(v=>`<td class="${v>0?'pos':v<0?'neg':''}" style="text-align:right;">${fmt(v)}</td>`).join('')}<td class="${r.cls}" style="text-align:right; font-weight:500;">${fmt(r.tot)}</td></tr>`).join('')+'</tbody></table>';
+  } else if(periodType==='month'){
+    const weeks=[14,15,16], wInc=weeks.map(w=>weeklyData[w].income), wExp=weeks.map(w=>weeklyData[w].expense), wNet=wInc.map((v,i)=>v-wExp[i]);
+    ts.innerHTML=`<table><thead><tr><th style="min-width:160px;">Статья</th>${weeks.map(w=>`<th style="text-align:right;">Нед. ${w}</th>`).join('')}<th style="text-align:right;">Итого</th></tr></thead><tbody>
+      <tr class="total-row"><td class="pos">Поступления</td>${wInc.map(v=>`<td class="pos" style="text-align:right;">${fmtFull(v)}</td>`).join('')}<td class="pos" style="text-align:right;">${fmtFull(wInc.reduce((a,b)=>a+b,0))}</td></tr>
+      <tr class="total-row"><td class="neg">Выбытия</td>${wExp.map(v=>`<td class="neg" style="text-align:right;">−${fmtFull(v)}</td>`).join('')}<td class="neg" style="text-align:right;">−${fmtFull(wExp.reduce((a,b)=>a+b,0))}</td></tr>
+      <tr class="total-row"><td>Чистый поток</td>${wNet.map(v=>`<td class="${v>=0?'pos':'neg'}" style="text-align:right;">${v>=0?'+':'−'}${fmtFull(Math.abs(v))}</td>`).join('')}<td style="text-align:right; font-weight:500;">${fmtFull(wNet.reduce((a,b)=>a+b,0))}</td></tr>
+    </tbody></table>`;
+  } else {
+    const w=selectedWeek||14, wd=weeklyData[w];
+    ts.innerHTML=`<table><thead><tr><th>Показатель</th><th style="text-align:right;">Сумма, руб.</th></tr></thead><tbody>
+      <tr class="total-row"><td class="pos">Поступления</td><td class="pos" style="text-align:right; font-weight:500;">${fmtFull(wd.income)}</td></tr>
+      <tr class="total-row"><td class="neg">Выбытия</td><td class="neg" style="text-align:right; font-weight:500;">−${fmtFull(wd.expense)}</td></tr>
+      <tr class="total-row"><td>Чистый поток</td><td class="${wd.income-wd.expense>=0?'pos':'neg'}" style="text-align:right; font-weight:500;">${wd.income-wd.expense>=0?'+':'−'}${fmtFull(Math.abs(wd.income-wd.expense))}</td></tr>
+    </tbody></table>`;
+  }
+
+  const td=document.getElementById('tab-detail');
+  const expE=Object.entries(d.expDet).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const totE=expE.reduce((s,[,v])=>s+v,0);
+  td.innerHTML=`<table><thead><tr><th style="min-width:220px;">Статья расходов</th><th style="text-align:right;">Сумма, руб.</th><th style="text-align:right;">Доля</th></tr></thead><tbody>`
+    +expE.map(([k,v])=>`<tr><td>${k}</td><td class="neg" style="text-align:right;">${fmtFull(v)}</td><td style="text-align:right; color:var(--text2);">${((v/totE)*100).toFixed(1)}%</td></tr>`).join('')
+    +`<tr class="total-row"><td>Итого</td><td class="neg" style="text-align:right;">${fmtFull(totE)}</td><td></td></tr></tbody></table>`;
+
+  const tc=document.getElementById('tab-clients');
+  if(periodType==='week'){
+    const w=selectedWeek||14, sorted=[...weeklyData[w].clients].sort((a,b)=>b[1]-a[1]);
+    tc.innerHTML=`<table><thead><tr><th style="min-width:220px;">Контрагент</th><th style="text-align:right;">Сумма, руб.</th></tr></thead><tbody>`
+      +sorted.map(([n,v])=>`<tr><td>${n}</td><td class="pos" style="text-align:right;">${fmtFull(v)}</td></tr>`).join('')
+      +`<tr class="total-row"><td>Итого</td><td class="pos" style="text-align:right;">${fmtFull(sorted.reduce((s,r)=>s+r[1],0))}</td></tr></tbody></table>`;
+  } else {
+    const allC=[
+      ['Ривьера АО',848268,0,0],['ГорИнжСтрой',128750,0,18270],['Фортресс',0,172100,0],
+      ['Без указания',0,115900,0],['Миг Стройпроект',0,0,115900],['Солбер Инжиниринг',75000,0,0],
+      ['Уралрегионстрой',0,50050,0],['Промстройкомплект',0,50000,0],['ХоумЭнерго',0,68500,0],
+      ['НПП Аналитические',0,33600,0],['ИП Жуков',0,0,28000],['Частник Вадим',0,0,25000],
+      ['Монтажсетьстрой',0,21000,0],['Модус',15000,19520,19520],['СпецИнжЗащита',0,16800,0],
+      ['Гиастрой ООО',18300,0,0],['БГ Констракшен',20000,0,0],['Доход по депозиту',1054,3806,51053],
+    ].map(r=>({n:r[0],w14:r[1],w15:r[2],w16:r[3],tot:r[1]+r[2]+r[3]})).sort((a,b)=>b.tot-a.tot);
+    const totC=allC.reduce((s,r)=>s+r.tot,0);
+    tc.innerHTML=`<table><thead><tr><th style="min-width:220px;">Контрагент</th><th style="text-align:right;">Нед. 14</th><th style="text-align:right;">Нед. 15</th><th style="text-align:right;">Нед. 16</th><th style="text-align:right;">Итого</th></tr></thead><tbody>`
+      +allC.map(r=>`<tr><td>${r.n}</td><td style="text-align:right;">${r.w14?fmtFull(r.w14):'—'}</td><td style="text-align:right;">${r.w15?fmtFull(r.w15):'—'}</td><td style="text-align:right;">${r.w16?fmtFull(r.w16):'—'}</td><td class="pos" style="text-align:right; font-weight:500;">${fmtFull(r.tot)}</td></tr>`).join('')
+      +`<tr class="total-row"><td>Итого</td><td></td><td></td><td></td><td class="pos" style="text-align:right;">${fmtFull(totC)}</td></tr></tbody></table>`;
+  }
+}
+
+function buildFormalReport() {
+  const sections = [
+    { title: 'I. ОПЕРАЦИОННАЯ ДЕЯТЕЛЬНОСТЬ', type: 'header' },
+    { title: 'Поступления', type: 'section' },
+    { label: 'Поступление от покупателей', vals: [2096970,6976851,4085285,4896422,7097038,4378869,6678712,8767946,11592327,5798988,617780], tot: 62987189, cls: 'pos', sub: true },
+    { label: 'Прочий приход', vals: [0,0,0,0,18847,810,0,124439,0,0,0], tot: 144096, cls: 'pos', sub: true },
+    { label: 'Доход по депозиту', vals: [0,25851,15855,13224,20170,16757,22841,38027,45473,12684,3722], tot: 214603, cls: 'pos', sub: true },
+    { label: 'Итого поступлений', vals: monthlyIncome, tot: monthlyIncome.reduce((a,b)=>a+b,0), cls: 'pos', bold: true },
+    { title: 'Выбытия', type: 'section' },
+    { label: 'Заработная плата', vals: [426293,1094057,913604,816449,1124387,344861,787178,742000,447446,930234,394839], tot: 8021347, cls: 'neg', sub: true },
+    { label: 'Лабораторные испытания', vals: [397000,1307900,739321,584438,212920,904320,150190,1304310,3221716,1525654,50000], tot: 10397769, cls: 'neg', sub: true },
+    { label: 'Единый налоговый платёж', vals: [123979,35419,188687,293169,18725,24981,232338,21488,31360,183892,45331], tot: 1199369, cls: 'neg', sub: true },
+    { label: 'Реклама', vals: [138287,145750,86367,119500,103200,73424,128376,134851,187270,190000,39600], tot: 1346625, cls: 'neg', sub: true },
+    { label: 'Аренда офиса', vals: [122706,104250,104250,104250,104250,208500,0,104250,104250,114700,0], tot: 1071406, cls: 'neg', sub: true },
+    { label: 'Бухгалтерия', vals: [53295,52290,36560,61310,25325,24960,42965,36665,59580,61697,0], tot: 454647, cls: 'neg', sub: true },
+    { label: 'Малоценка', vals: [133714,20816,58701,0,0,4497,61385,11712,86583,3921,8782], tot: 390111, cls: 'neg', sub: true },
+    { label: 'Возврат денег клиентам', vals: [0,0,163500,319000,0,0,0,2929740,0,0,0], tot: 3255372, cls: 'neg', sub: true },
+    { label: 'Прочие операционные', vals: [80519,99643,769190,286061,434306,218525,197823,249736,141905,165430,30046], tot: 2813184, cls: 'neg', sub: true },
+    { label: 'Итого выбытий', vals: monthlyExpense.map(v=>-v), tot: -monthlyExpense.reduce((a,b)=>a+b,0), cls: 'neg', bold: true },
+    { label: 'ЧИСТЫЙ ПОТОК ОТ ОПЕРАЦИОННОЙ ДЕЯТЕЛЬНОСТИ', vals: monthlyIncome.map((v,i)=>v-monthlyExpense[i]), tot: monthlyIncome.reduce((a,b)=>a+b,0)-monthlyExpense.reduce((a,b)=>a+b,0), cls: '', bold: true, grand: true },
+    { title: 'II. ИНВЕСТИЦИОННАЯ ДЕЯТЕЛЬНОСТЬ', type: 'header' },
+    { label: 'Покупка оборудования / авто', vals: [0,235710,0,0,0,59400,0,0,0,0,0], tot: 295110, cls: 'neg', sub: true },
+    { label: 'ЧИСТЫЙ ПОТОК ОТ ИНВЕСТИЦИОННОЙ ДЕЯТЕЛЬНОСТИ', vals: [0,-235710,0,0,0,-59400,0,0,0,0,0], tot: -295110, cls: 'neg', bold: true, grand: true },
+    { title: 'III. ФИНАНСОВАЯ ДЕЯТЕЛЬНОСТЬ', type: 'header' },
+    { label: 'Дивиденды выплаченные', vals: monthlyFin.map(v=>-v), tot: -monthlyFin.reduce((a,b)=>a+b,0), cls: 'neg', sub: true },
+    { label: 'ЧИСТЫЙ ПОТОК ОТ ФИНАНСОВОЙ ДЕЯТЕЛЬНОСТИ', vals: monthlyFin.map(v=>-v), tot: -monthlyFin.reduce((a,b)=>a+b,0), cls: 'neg', bold: true, grand: true },
+  ];
+  const totalNet = monthlyIncome.map((v,i)=>v-monthlyExpense[i]);
+  const totalNetSum = totalNet.reduce((a,b)=>a+b,0) - monthlyExpense.reduce(()=>0,0);
+  const netOp = monthlyIncome.reduce((a,b)=>a+b,0)-monthlyExpense.reduce((a,b)=>a+b,0);
+  const netInv = -295110, netFin = -monthlyFin.reduce((a,b)=>a+b,0);
+  const grandTotVals = monthlyIncome.map((v,i)=>v-monthlyExpense[i]-monthlyFin[i]);
+  sections.push({ label: 'ИТОГО ИЗМЕНЕНИЕ ДЕНЕЖНЫХ СРЕДСТВ', vals: grandTotVals, tot: netOp+netInv+netFin, cls: '', bold: true, grand: true });
+
+  const tbody = document.getElementById('formal-report-body');
+  tbody.innerHTML = sections.map(row => {
+    if (row.type === 'header') return `<tr class="section-header"><td colspan="13">${row.title}</td></tr>`;
+    if (row.type === 'section') return `<tr><td colspan="13" style="padding-left:12px; font-weight:500; color:var(--text2); font-size:12px; padding-top:8px;">${row.title}</td></tr>`;
+    const tdClass = row.cls || '';
+    const trClass = row.grand ? 'grand-total' : (row.bold ? 'total-row' : (row.sub ? 'sub-row' : ''));
+    const vCells = row.vals.map(v => `<td class="${v>0&&row.cls==='pos'?'pos':v<0||row.cls==='neg'?'neg':''}" style="text-align:right;">${v!==0?fmtFull(v):'—'}</td>`).join('');
+    const totCell = `<td class="${row.tot>0&&row.cls==='pos'?'pos':row.tot<0||row.cls==='neg'?'neg':''}" style="text-align:right; font-weight:500;">${fmtFull(row.tot)}</td>`;
+    return `<tr class="${trClass}"><td>${row.label}</td>${vCells}${totCell}</tr>`;
+  }).join('');
+}
+
+function setPeriodType(type) {
+  periodType=type;
+  if(type==='month'){selectedMonth=0;selectedWeek=null;}
+  if(type==='week'){selectedWeek=14;selectedMonth=null;}
+  if(type==='year'){selectedMonth=null;selectedWeek=null;}
+  document.querySelectorAll('.seg-btn').forEach((b,i)=>b.classList.toggle('active',['year','month','week'][i]===type));
+  renderSubSelect(); renderAll();
+}
+
+function renderSubSelect() {
+  const ss=document.getElementById('sub-select'); ss.innerHTML='';
+  if(periodType==='year'){ss.style.display='none';return;}
+  ss.style.display='flex';
+  if(periodType==='month') MONTHS.forEach((m,i)=>{const b=document.createElement('button');b.className='pill'+(i===selectedMonth?' active':'');b.textContent=MONTHS_SHORT[i];b.onclick=()=>{selectedMonth=i;renderSubSelect();renderAll();};ss.appendChild(b);});
+  if(periodType==='week') [14,15,16].forEach(w=>{const b=document.createElement('button');b.className='pill'+(w===selectedWeek?' active':'');b.textContent='Нед. '+w;b.onclick=()=>{selectedWeek=w;renderSubSelect();renderAll();};ss.appendChild(b);});
+}
+
+function switchTab(name) {
+  ['summary','detail','clients'].forEach(t=>{ document.getElementById('tab-'+t).style.display=t===name?'block':'none'; });
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['summary','detail','clients'][i]===name));
+}
+
+renderAll();
+buildFormalReport();
+</script>
+</body>
+</html>
